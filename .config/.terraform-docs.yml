@@ -1,0 +1,19 @@
+sections:
+  show:
+    - header
+    - providers
+    - inputs
+    - outputs
+sort:
+  enabled: true
+  by: required
+content: |
+  # Terraform Module for creating Grafana Alert Rules
+
+  This module provides an easy way to deploy alert rules on Grafana Cloud.
+
+  ## Example
+
+  ```hcl
+  {{ include "examples/homelab/main.tf" }}
+  ```

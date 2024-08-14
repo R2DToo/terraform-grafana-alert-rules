@@ -1,12 +1,3 @@
-# terraform-grafana-alert-rules
-<!-- BEGIN_TF_DOCS -->
-# Terraform Module for creating Grafana Alert Rules
-
-This module provides an easy way to deploy alert rules on Grafana Cloud.
-
-## Example
-
-```hcl
 module "grafana_alerts" {
   source = "./module"
 
@@ -37,5 +28,3 @@ module "grafana_alerts" {
     }
   ]
 }
-```
-<!-- END_TF_DOCS -->

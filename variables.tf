@@ -16,5 +16,6 @@ variable "alert_rules" {
     query       = string
     window      = string
     description = string
+    datasource  = optional(string, "prometheus")
   }))
 }

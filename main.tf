@@ -13,6 +13,20 @@ locals {
     "<" = "lt"
     ">" = "gt"
   }
+  datasource = {
+    prometheus = "grafanacloud-prom"
+    loki       = "grafanacloud-logs"
+  }
+  model_config = {
+    loki = {
+      queryType     = "instant"
+    }
+    prometheus = {
+      instant       = true
+      legendFormat  = "__auto"
+      range         = false
+    }
+  }
 }
 
 data "grafana_folder" "this" {
@@ -50,17 +64,15 @@ resource "grafana_rule_group" "this" {
           to   = 0
         }
 
-        datasource_uid = "grafanacloud-prom"
-        model = jsonencode({
+        datasource_uid = local.datasource[rule.value.datasource]
+        model = jsonencode(merge({
           editorMode    = "code"
-          expr          = regex(local.regex_query, rule.value.query)[0]
-          instant       = true
+          expr          = replace(regex(local.regex_query, rule.value.query)[0], "\n", "")
           intervalMs    = 1000
-          legendFormat  = "__auto"
           maxDataPoints = 43200
-          range         = false
           refId         = "query"
-        })
+          hide          = false
+        }, local.model_config[rule.value.datasource]))
       }
       data {
         ref_id = "threshold"

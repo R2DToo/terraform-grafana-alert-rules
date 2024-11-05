@@ -8,23 +8,21 @@ terraform {
 }
 
 locals {
-  regex_query = "(^[^<>]*) (<|>) (.+)"
   operator_translation = {
     "<" = "lt"
     ">" = "gt"
   }
   datasource = {
-    prometheus = "grafanacloud-prom"
-    loki       = "grafanacloud-logs"
+    splunk = "ddybapuid8nwgc"
+    mssql = "be1r64e3uo9hce"
   }
   model_config = {
-    loki = {
-      queryType     = "instant"
+    splunk = {
+      query = rule.value.query
     }
-    prometheus = {
-      instant       = true
-      legendFormat  = "__auto"
-      range         = false
+    mssql = {
+      rawQuery = true
+      rawSql = rule.value.query
     }
   }
 }
@@ -34,9 +32,9 @@ data "grafana_folder" "this" {
 }
 
 resource "grafana_rule_group" "this" {
-  name             = var.name
+  name             = var.rule_group_name
   folder_uid       = data.grafana_folder.this.uid
-  interval_seconds = 60
+  interval_seconds = var.rule_group_frequency
 
   dynamic "rule" {
     for_each = var.alert_rules
@@ -47,39 +45,44 @@ resource "grafana_rule_group" "this" {
 
       no_data_state  = "NoData"
       exec_err_state = "Error"
-      for            = rule.value.window
+      for            = rule.value.pending_period
       annotations = {
-        summary     = rule.value.summary
-        description = rule.value.description
+        u_short_description = rule.value.annotation_u_short_description
+        u_description = rule.value.annotation_u_description
+        u_resource_id = rule.value.annotation_u_resource_id
+        u_hostname = rule.value.annotation_u_hostname
+        u_service_id = rule.value.annotation_u_service_id
+        u_priority = rule.value.annotation_u_priority
+        u_correlation_id = rule.value.annotation_u_correlation_id
+        u_trigger_callout = rule.value.annotation_u_trigger_callout
       }
-      labels    = {}
-      is_paused = false
-
+      labels    = {
+        servicenow_dev = rule.value.label_servicenow_dev
+      }
+      is_paused = rule.value.is_paused
 
       data {
         ref_id = "query"
 
         relative_time_range {
-          from = 600
-          to   = 0
+          from = rule.value.query_timerange.from
+          to   = rule.value.query_timerange.to
         }
 
         datasource_uid = local.datasource[rule.value.datasource]
         model = jsonencode(merge({
-          editorMode    = "code"
-          expr          = replace(regex(local.regex_query, rule.value.query)[0], "\n", "")
           intervalMs    = 1000
           maxDataPoints = 43200
           refId         = "query"
-          hide          = false
         }, local.model_config[rule.value.datasource]))
       }
+
       data {
         ref_id = "threshold"
 
         relative_time_range {
-          from = 600
-          to   = 0
+          from = rule.value.query_timerange.from
+          to   = rule.value.query_timerange.to
         }
 
         datasource_uid = "__expr__"
@@ -87,8 +90,8 @@ resource "grafana_rule_group" "this" {
           conditions = [
             {
               evaluator = {
-                params = [tonumber(regex(local.regex_query, rule.value.query)[2])]
-                type   = local.operator_translation[regex(local.regex_query, rule.value.query)[1]]
+                params = rule.value.condition_value
+                type   = local.operator_translation[rule.value.condition_operator]
               },
               operator = {
                 type = "and",
